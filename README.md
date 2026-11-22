@@ -12,7 +12,9 @@ Built to be hosted free on **GitHub Pages** at **https://therapeakchiro.com**.
 | `assets/site.js` | Small progressive-enhancement script: mobile menu, header shadow, appointment form (mailto draft + copy), footer year. |
 | `assets/hero-clinic-*.jpg`, `assets/spine-model-*.jpg` | Hero and about-section photos (AI-generated placeholders — replace with real clinic photos when available; keep the file names). |
 | `assets/og-image.jpg` | 1200×630 social preview image. |
-| `assets/favicon.svg` | Favicon / logo mark. |
+| `assets/logo-mark.png`, `assets/logo-mark-light.png` | The Therapeak logo mark on a transparent background — the light version is re-coloured for the dark footer. Used in the header and footer lockups. |
+| `assets/logo-full.png`, `assets/logo-full-light.png` | The full stacked logo (mark + wordmark), transparent, for social profiles, print and the JSON-LD `logo` URL. |
+| `assets/icon-16.png` … `icon-512.png`, `favicon.ico` | Favicon and app icons drawn from the mark (paper background so they read on any tab bar). |
 | `CNAME` | `therapeakchiro.com` — tells GitHub Pages which domain to serve. |
 | `404.html` | Friendly not-found page. |
 | `robots.txt`, `sitemap.xml` | Search engine basics. |
@@ -37,6 +39,7 @@ All asset paths are **relative**, so the site works at both `therapeakchiro.com/
 - **Phone / email / address:** search `index.html` for `524-3602`, `therapeakchiro@gmail.com`, `Grady Way`. Each appears in the header, hero, contact card, form text, footer and JSON-LD — update all of them.
 - **Hours:** the site says "By appointment" throughout (hero badge, contact card, footer). Do not add specific hours unless the clinic adopts them.
 - **Services / FAQ:** each is a self-contained block; the FAQ answers are also duplicated in the `FAQPage` JSON-LD near the top of `index.html` — keep the two in sync.
+- **Brand:** the logo images are supplied artwork — replace `assets/logo-*.png` and re-run any icon export if the logo changes. The header wordmark is live text (`THERAPEAK` / `CHIROPRACTIC` in Inter 800), so keep it in step with the artwork.
 - **Colours and type:** the `:root` block at the top of `styles.css` (navy `--ink`, off-white `--paper`, muted teal `--teal`, sage `--sage`).
 
 ## How the appointment form works
