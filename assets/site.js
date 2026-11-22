@@ -159,19 +159,21 @@
 
   /* FormSubmit payload: every named field plus its options, and _replyto set
      to the visitor's own address so the clinic can answer straight from the
-     notification email. */
+     notification email. Sent URL-encoded so the browser makes a simple
+     cross-origin request (a JSON body would need a preflight FormSubmit does
+     not answer). */
   function buildPayload() {
-    var payload = {};
     var data = new window.FormData(form);
+    var body = new window.URLSearchParams();
     data.forEach(function (value, key) {
       if (key === "_replyto") return;
-      payload[key] = typeof value === "string" ? value.trim() : value;
+      body.append(key, typeof value === "string" ? value.trim() : value);
     });
-    payload._subject = "New appointment request — " + (fieldValue("name") || "website visitor");
-    payload._template = "table";
-    payload._captcha = "false";
-    payload._replyto = fieldValue("email");
-    return payload;
+    body.set("_subject", "New appointment request — " + (fieldValue("name") || "website visitor"));
+    body.set("_template", "table");
+    body.set("_captcha", "false");
+    body.set("_replyto", fieldValue("email"));
+    return body;
   }
 
   function clearInvalid() {
@@ -217,8 +219,8 @@
 
       window.fetch(FORM_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify(payload),
+        headers: { "Accept": "application/json" },
+        body: payload,
         signal: controller ? controller.signal : undefined
       })
         .then(function (response) {
