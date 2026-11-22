@@ -3,13 +3,15 @@
    Progressive enhancement only: the page works fully without it.
    1. Mobile navigation
    2. Header shadow on scroll
-   3. Appointment request form (mailto draft + copy to clipboard)
+   3. Appointment request form (FormSubmit AJAX, with copy-to-clipboard fallback)
    4. Footer year
    ========================================================================== */
 (function () {
   "use strict";
 
   var CLINIC_EMAIL = "therapeakchiro@gmail.com";
+  var FORM_ENDPOINT = "https://formsubmit.co/ajax/" + CLINIC_EMAIL;
+  var SUBMIT_TEXT = "Send Request";
 
   /* ---------------------------------------------------- Mobile navigation */
   var toggle = document.querySelector(".nav-toggle");
@@ -60,6 +62,9 @@
   var form = document.getElementById("appointment-form");
   var status = document.getElementById("form-status");
   var copyBtn = document.getElementById("copy-details");
+  var submitBtn = document.getElementById("send-request");
+  var submitLabel = submitBtn ? submitBtn.querySelector(".btn-label") : null;
+  var sending = false;
 
   function fieldValue(id) {
     var el = document.getElementById(id);
@@ -111,6 +116,62 @@
     if (!status) return;
     status.textContent = message;
     status.classList.toggle("is-error", !!isError);
+    status.classList.remove("is-success");
+  }
+
+  function setSending(busy) {
+    sending = busy;
+    if (form) form.setAttribute("aria-busy", busy ? "true" : "false");
+    if (submitBtn) {
+      submitBtn.disabled = busy;
+      submitBtn.classList.toggle("is-busy", busy);
+    }
+    if (submitLabel) submitLabel.textContent = busy ? "Sending..." : SUBMIT_TEXT;
+  }
+
+  /* Fallback when the message cannot be sent from the page: offer the same
+     details as an email, next to the Copy details button. */
+  function showSendFailure() {
+    if (!status) return;
+    var request = buildRequest();
+    status.textContent = "";
+    status.classList.add("is-error");
+    status.classList.remove("is-success");
+    status.appendChild(document.createTextNode("We could not send your request just now. "));
+    var mail = document.createElement("a");
+    mail.href = request.mailto;
+    mail.textContent = "Send it by email instead";
+    status.appendChild(mail);
+    status.appendChild(document.createTextNode(" or use Copy details below and send it to " + CLINIC_EMAIL + "."));
+  }
+
+  function showSuccess() {
+    if (form) {
+      form.classList.add("is-sent");
+      form.reset();
+    }
+    if (status) {
+      status.textContent = "Request sent — we'll reply during business hours. For anything urgent, call (425) 524-3602.";
+      status.classList.remove("is-error");
+      status.classList.add("is-success");
+    }
+  }
+
+  /* FormSubmit payload: every named field plus its options, and _replyto set
+     to the visitor's own address so the clinic can answer straight from the
+     notification email. */
+  function buildPayload() {
+    var payload = {};
+    var data = new window.FormData(form);
+    data.forEach(function (value, key) {
+      if (key === "_replyto") return;
+      payload[key] = typeof value === "string" ? value.trim() : value;
+    });
+    payload._subject = "New appointment request — " + (fieldValue("name") || "website visitor");
+    payload._template = "table";
+    payload._captcha = "false";
+    payload._replyto = fieldValue("email");
+    return payload;
   }
 
   function clearInvalid() {
@@ -135,14 +196,51 @@
         return;
       }
 
-      var request = buildRequest();
-      setStatus("Opening your email app with the request filled in — press send there to reach the clinic. If nothing opens, use Copy details below.");
+      if (sending) return;
 
-      try {
-        window.location.href = request.mailto;
-      } catch (err) {
-        setStatus("Your email app did not open. Use Copy details and send the message to " + CLINIC_EMAIL + ".", true);
+      /* No fetch (very old browser): fall back to the email draft. */
+      if (typeof window.fetch !== "function") {
+        var draft = buildRequest();
+        setStatus("Sending from the page is not supported in this browser. Opening your email app with the request filled in.");
+        window.location.href = draft.mailto;
+        return;
       }
+
+      setSending(true);
+      setStatus("Sending your request to the clinic...");
+
+      var payload = buildPayload();
+      var controller = typeof window.AbortController === "function" ? new window.AbortController() : null;
+      var timer = controller
+        ? window.setTimeout(function () { controller.abort(); }, 20000)
+        : null;
+
+      window.fetch(FORM_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller ? controller.signal : undefined
+      })
+        .then(function (response) {
+          return response.json().catch(function () { return {}; }).then(function (body) {
+            return { ok: response.ok, body: body };
+          });
+        })
+        .then(function (result) {
+          var body = result.body || {};
+          if (result.ok && String(body.success).toLowerCase() === "true") {
+            showSuccess();
+          } else {
+            showSendFailure();
+          }
+        })
+        .catch(function () {
+          showSendFailure();
+        })
+        .then(function () {
+          if (timer) window.clearTimeout(timer);
+          setSending(false);
+        });
     });
   }
 
