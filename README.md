@@ -9,7 +9,7 @@ Built to be hosted free on **GitHub Pages** at **https://therapeakchiro.com**.
 | --- | --- |
 | `index.html` | The whole site: hero, auto injury & PIP, services, about, FAQ, location, appointment form, footer. Includes SEO meta, Open Graph tags and JSON-LD (Chiropractor + FAQPage). |
 | `styles.css` | All styling. Design tokens at the top (`:root`), mobile-first breakpoints at the bottom. |
-| `assets/site.js` | Small progressive-enhancement script: mobile menu, header shadow, appointment form (mailto draft + copy), footer year. |
+| `assets/site.js` | Small progressive-enhancement script: mobile menu, header shadow, appointment form (AJAX send through FormSubmit, with copy fallback), footer year. |
 | `assets/hero-clinic-*.jpg`, `assets/spine-model-*.jpg` | Hero and about-section photos (AI-generated placeholders — replace with real clinic photos when available; keep the file names). |
 | `assets/og-image.jpg` | 1200×630 social preview image. |
 | `assets/logo-mark.png`, `assets/logo-mark-light.png` | The Therapeak logo mark on a transparent background — the light version is re-coloured for the dark footer. Used in the header and footer lockups. |
@@ -44,11 +44,18 @@ All asset paths are **relative**, so the site works at both `therapeakchiro.com/
 
 ## How the appointment form works
 
-GitHub Pages is static, so there is no server. The form:
+GitHub Pages is static, so there is no server. The form sends its request through **FormSubmit**, a free form-to-email service, which forwards it to `therapeakchiro@gmail.com`:
 
 1. Checks the three required fields (name, phone, email).
-2. Builds a formatted message and opens the visitor's own email app addressed to `therapeakchiro@gmail.com` (`mailto:` draft). Nothing is sent until they press send.
-3. **Copy details** copies the same message to the clipboard for visitors whose browser or phone has no mail app configured.
+2. Sends an AJAX `POST` to `https://formsubmit.co/ajax/therapeakchiro@gmail.com` with the form fields plus `_subject`, `_template=table`, `_captcha=false` and `_replyto` set to the visitor's own email, so replying to the notification goes straight back to them. The body is URL-encoded on purpose: a JSON body would trigger a CORS preflight that FormSubmit does not answer, and every send would fail.
+3. Shows **Sending...** on the button, then the confirmation line "Request sent — we'll reply during business hours." and hides the fields.
+4. If the send fails (offline, service down), it offers a `mailto:` link with the same message prefilled plus **Copy details**, so the visitor can still reach the clinic.
+
+The hidden `_honey` field is FormSubmit's honeypot: a bot that fills it gets its submission silently dropped.
+
+**FormSubmit activation.** The first submission coming from a given origin gets an "Activate Form" email to `therapeakchiro@gmail.com`; until that link is clicked nothing is forwarded and the form shows its failure fallback. Activation is per origin — `http://therapeakchiro.com` and `https://therapeakchiro.com` each need their own. Both are activated. A new domain, subdomain that is not redirected, or switch of scheme needs its own activation.
+
+**Deliverability.** FormSubmit notifications come from `submissions@formsubmit.co` and Gmail has been filing them under **Spam**, so keep an eye on that folder or add a Gmail filter for that sender (never send to spam, label e.g. "Appointment requests").
 
 No data is stored on the site. If online booking is added later (Jane, Calendly, etc.), replace the form with a button that embeds or links to the scheduler.
 
