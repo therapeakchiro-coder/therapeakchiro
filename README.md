@@ -49,7 +49,7 @@ GitHub Pages is static, so there is no server. The form sends its request throug
 1. Checks the three required fields (name, phone, email).
 2. Sends an AJAX `POST` to `https://formsubmit.co/ajax/therapeakchiro@gmail.com` with the form fields plus `_subject`, `_template=table`, `_captcha=false` and `_replyto` set to the visitor's own email, so replying to the notification goes straight back to them. The body is URL-encoded on purpose: a JSON body would trigger a CORS preflight that FormSubmit does not answer, and every send would fail.
 3. Shows **Sending...** on the button, then the confirmation line "Request sent — we'll reply during business hours." and hides the fields.
-4. If the send fails (offline, service down), it offers a `mailto:` link with the same message prefilled plus **Copy details**, so the visitor can still reach the clinic.
+4. If the send fails (offline, service down), it offers a `mailto:` link with the same message prefilled plus **Copy details**, so the visitor can still reach the clinic. The page waits up to 60 seconds for FormSubmit's answer; if that runs out, the visitor is told the request may already be on its way, to wait a moment before trying again, and given the same email / **Copy details** fallbacks — a slow answer is not reported as a failure.
 
 The hidden `_honey` field is FormSubmit's honeypot: a bot that fills it gets its submission silently dropped.
 

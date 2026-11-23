@@ -145,6 +145,24 @@
     status.appendChild(document.createTextNode(" or use Copy details below and send it to " + CLINIC_EMAIL + "."));
   }
 
+  /* The page stopped waiting for FormSubmit, but the request may well have
+     reached the clinic already. So this is not shown as an error: no red
+     styling and no "try again" push, just a calm note with the email and
+     Copy details fallbacks still within reach. */
+  function showSendTimeout() {
+    if (!status) return;
+    var request = buildRequest();
+    status.textContent = "";
+    status.classList.remove("is-error");
+    status.classList.remove("is-success");
+    status.appendChild(document.createTextNode("Still sending — your request may already be on its way. Please wait a moment before trying again. You can also email "));
+    var mail = document.createElement("a");
+    mail.href = request.mailto;
+    mail.textContent = CLINIC_EMAIL;
+    status.appendChild(mail);
+    status.appendChild(document.createTextNode(" directly, or use Copy details below."));
+  }
+
   function showSuccess() {
     if (form) {
       form.classList.add("is-sent");
@@ -214,7 +232,7 @@
       var payload = buildPayload();
       var controller = typeof window.AbortController === "function" ? new window.AbortController() : null;
       var timer = controller
-        ? window.setTimeout(function () { controller.abort(); }, 20000)
+        ? window.setTimeout(function () { controller.abort(); }, 60000)
         : null;
 
       window.fetch(FORM_ENDPOINT, {
@@ -236,8 +254,14 @@
             showSendFailure();
           }
         })
-        .catch(function () {
-          showSendFailure();
+        .catch(function (error) {
+          /* Our own timeout is not a send failure: the request may have gone
+             through and FormSubmit is just slow to answer. */
+          if (error && error.name === "AbortError") {
+            showSendTimeout();
+          } else {
+            showSendFailure();
+          }
         })
         .then(function () {
           if (timer) window.clearTimeout(timer);
