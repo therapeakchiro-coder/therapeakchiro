@@ -756,7 +756,7 @@ address { font-style: normal; }
   gap: clamp(2rem, 5vw, 4.5rem);
   align-items: start;
 }
-.about-visual { position: relative; padding-bottom: 4rem; }
+.about-visual { position: relative; padding-bottom: 4.5rem; }
 .about-visual figure {
   margin: 0;
   border-radius: var(--radius-lg);
