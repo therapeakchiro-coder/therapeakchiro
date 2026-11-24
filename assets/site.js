@@ -13,6 +13,22 @@
   var FORM_ENDPOINT = "https://formsubmit.co/ajax/" + CLINIC_EMAIL;
   var SUBMIT_TEXT = "Send Request";
 
+  /* Confirmation email FormSubmit sends to the visitor, with a copy of what
+     they submitted (the form's email field is what it replies to). Plain
+     text: FormSubmit wraps this in its own layout. */
+  var AUTORESPONSE =
+    "Thank you for contacting Therapeak Chiropractic.\n\n" +
+    "We have received your appointment request and will follow up during " +
+    "business hours to confirm a day and time that works for you. If your " +
+    "request is urgent, please call us at (425) 524-3602 and leave a message " +
+    "if we are with a patient, and we will call you back.\n\n" +
+    "Therapeak Chiropractic\n" +
+    "15 S. Grady Way, Suite 510, Renton, WA 98057\n" +
+    "(425) 524-3602  |  therapeakchiro@gmail.com\n" +
+    "Hours: by appointment\n\n" +
+    "A copy of the details you sent is included below. This message was sent " +
+    "automatically, so there is no need to reply to it.";
+
   /* ---------------------------------------------------- Mobile navigation */
   var toggle = document.querySelector(".nav-toggle");
   var nav = document.getElementById("primary-nav");
@@ -191,6 +207,7 @@
     body.set("_template", "table");
     body.set("_captcha", "false");
     body.set("_replyto", fieldValue("email"));
+    body.set("_autoresponse", AUTORESPONSE);
     return body;
   }
 
