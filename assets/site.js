@@ -3,14 +3,13 @@
    Progressive enhancement only: the page works fully without it.
    1. Mobile navigation
    2. Header shadow on scroll
-   3. Appointment request form (FormSubmit AJAX, with copy-to-clipboard fallback)
+   3. Appointment request form (normal FormSubmit POST, with copy-to-clipboard fallback)
    4. Footer year
    ========================================================================== */
 (function () {
   "use strict";
 
   var CLINIC_EMAIL = "therapeakchiro@gmail.com";
-  var FORM_ENDPOINT = "https://formsubmit.co/ajax/" + CLINIC_EMAIL;
   var SUBMIT_TEXT = "Send Request";
 
   /* Confirmation email FormSubmit sends to the visitor, with a copy of what
@@ -28,6 +27,16 @@
     "Hours: by appointment\n\n" +
     "A copy of the details you sent is included below. This message was sent " +
     "automatically, so there is no need to reply to it.";
+
+  /* FormSubmit only emails the visitor a confirmation (_autoresponse) when the
+     form is submitted as a normal form POST, so this value goes into the
+     hidden field in index.html rather than into a fetch request. */
+  var autoresponseField = document.getElementById("autoresponse");
+  if (autoresponseField) autoresponseField.value = AUTORESPONSE;
+
+  /* The clinic inbox labels each request with the patient's name, the way the
+     AJAX payload used to. */
+  var subjectField = document.getElementById("subject-field");
 
   /* ---------------------------------------------------- Mobile navigation */
   var toggle = document.querySelector(".nav-toggle");
@@ -145,72 +154,6 @@
     if (submitLabel) submitLabel.textContent = busy ? "Sending..." : SUBMIT_TEXT;
   }
 
-  /* Fallback when the message cannot be sent from the page: offer the same
-     details as an email, next to the Copy details button. */
-  function showSendFailure() {
-    if (!status) return;
-    var request = buildRequest();
-    status.textContent = "";
-    status.classList.add("is-error");
-    status.classList.remove("is-success");
-    status.appendChild(document.createTextNode("We could not send your request just now. "));
-    var mail = document.createElement("a");
-    mail.href = request.mailto;
-    mail.textContent = "Send it by email instead";
-    status.appendChild(mail);
-    status.appendChild(document.createTextNode(" or use Copy details below and send it to " + CLINIC_EMAIL + "."));
-  }
-
-  /* The page stopped waiting for FormSubmit, but the request may well have
-     reached the clinic already. So this is not shown as an error: no red
-     styling and no "try again" push, just a calm note with the email and
-     Copy details fallbacks still within reach. */
-  function showSendTimeout() {
-    if (!status) return;
-    var request = buildRequest();
-    status.textContent = "";
-    status.classList.remove("is-error");
-    status.classList.remove("is-success");
-    status.appendChild(document.createTextNode("Still sending — your request may already be on its way. Please wait a moment before trying again. You can also email "));
-    var mail = document.createElement("a");
-    mail.href = request.mailto;
-    mail.textContent = CLINIC_EMAIL;
-    status.appendChild(mail);
-    status.appendChild(document.createTextNode(" directly, or use Copy details below."));
-  }
-
-  function showSuccess() {
-    if (form) {
-      form.classList.add("is-sent");
-      form.reset();
-    }
-    if (status) {
-      status.textContent = "Request sent — we'll reply during business hours. For anything urgent, call (425) 524-3602.";
-      status.classList.remove("is-error");
-      status.classList.add("is-success");
-    }
-  }
-
-  /* FormSubmit payload: every named field plus its options, and _replyto set
-     to the visitor's own address so the clinic can answer straight from the
-     notification email. Sent URL-encoded so the browser makes a simple
-     cross-origin request (a JSON body would need a preflight FormSubmit does
-     not answer). */
-  function buildPayload() {
-    var data = new window.FormData(form);
-    var body = new window.URLSearchParams();
-    data.forEach(function (value, key) {
-      if (key === "_replyto") return;
-      body.append(key, typeof value === "string" ? value.trim() : value);
-    });
-    body.set("_subject", "New appointment request — " + (fieldValue("name") || "website visitor"));
-    body.set("_template", "table");
-    body.set("_captcha", "false");
-    body.set("_replyto", fieldValue("email"));
-    body.set("_autoresponse", AUTORESPONSE);
-    return body;
-  }
-
   function clearInvalid() {
     Array.prototype.forEach.call(
       form.querySelectorAll("[aria-invalid='true']"),
@@ -220,10 +163,10 @@
 
   if (form) {
     form.addEventListener("submit", function (event) {
-      event.preventDefault();
       clearInvalid();
 
       if (!form.checkValidity()) {
+        event.preventDefault();
         var invalid = form.querySelector(":invalid");
         if (invalid) {
           invalid.setAttribute("aria-invalid", "true");
@@ -233,57 +176,21 @@
         return;
       }
 
-      if (sending) return;
-
-      /* No fetch (very old browser): fall back to the email draft. */
-      if (typeof window.fetch !== "function") {
-        var draft = buildRequest();
-        setStatus("Sending from the page is not supported in this browser. Opening your email app with the request filled in.");
-        window.location.href = draft.mailto;
+      if (sending) {
+        event.preventDefault();
         return;
       }
 
+      /* Let the browser POST the form to FormSubmit as a normal submission.
+         That is the only route on which FormSubmit emails the visitor a
+         confirmation (its _autoresponse is not sent for AJAX submissions, and
+         not when reCAPTCHA is turned off). FormSubmit sends the visitor on to
+         thanks.html afterwards (_next). */
+      if (subjectField) {
+        subjectField.value = "New appointment request — " + (fieldValue("name") || "website visitor");
+      }
       setSending(true);
       setStatus("Sending your request to the clinic...");
-
-      var payload = buildPayload();
-      var controller = typeof window.AbortController === "function" ? new window.AbortController() : null;
-      var timer = controller
-        ? window.setTimeout(function () { controller.abort(); }, 60000)
-        : null;
-
-      window.fetch(FORM_ENDPOINT, {
-        method: "POST",
-        headers: { "Accept": "application/json" },
-        body: payload,
-        signal: controller ? controller.signal : undefined
-      })
-        .then(function (response) {
-          return response.json().catch(function () { return {}; }).then(function (body) {
-            return { ok: response.ok, body: body };
-          });
-        })
-        .then(function (result) {
-          var body = result.body || {};
-          if (result.ok && String(body.success).toLowerCase() === "true") {
-            showSuccess();
-          } else {
-            showSendFailure();
-          }
-        })
-        .catch(function (error) {
-          /* Our own timeout is not a send failure: the request may have gone
-             through and FormSubmit is just slow to answer. */
-          if (error && error.name === "AbortError") {
-            showSendTimeout();
-          } else {
-            showSendFailure();
-          }
-        })
-        .then(function () {
-          if (timer) window.clearTimeout(timer);
-          setSending(false);
-        });
     });
   }
 

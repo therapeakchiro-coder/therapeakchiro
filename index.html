@@ -637,10 +637,11 @@
         </div>
 
         <form class="appointment-form" id="appointment-form" action="https://formsubmit.co/therapeakchiro@gmail.com" method="POST" novalidate>
-          <input type="hidden" name="_subject" value="New appointment request — therapeakchiro.com">
+          <input type="hidden" name="_subject" id="subject-field" value="New appointment request — therapeakchiro.com">
           <input type="hidden" name="_template" value="table">
-          <input type="hidden" name="_captcha" value="false">
           <input type="hidden" name="_replyto" value="email">
+          <input type="hidden" name="_next" value="https://therapeakchiro.com/thanks.html">
+          <input type="hidden" name="_autoresponse" id="autoresponse" value="Thank you for contacting Therapeak Chiropractic. We have received your appointment request and will follow up during business hours to confirm a day and time. If your request is urgent, call (425) 524-3602.">
           <div class="hp-field" aria-hidden="true">
             <label for="_honey">Leave this field empty</label>
             <input type="text" id="_honey" name="_honey" tabindex="-1" autocomplete="off">
@@ -705,7 +706,7 @@
           </div>
 
           <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
-          <p class="fineprint fineprint-light">Your request is delivered to the clinic inbox by email through <strong>FormSubmit</strong>, a form-to-email service; nothing is saved on this site. Please leave out sensitive medical details — we take a full history at your visit. If sending fails, use <strong>Copy details</strong> or email therapeakchiro@gmail.com.</p>
+          <p class="fineprint fineprint-light">Your request is delivered to the clinic inbox by email through <strong>FormSubmit</strong>, a form-to-email service; nothing is saved on this site. You will get a confirmation email at the address you enter. Please leave out sensitive medical details — we take a full history at your visit. If sending fails, use <strong>Copy details</strong> or email therapeakchiro@gmail.com.</p>
         </form>
       </div>
     </section>
